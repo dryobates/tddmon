@@ -99,7 +99,7 @@ class RunMonitorTestCase(unittest.TestCase):
         u'zobaczę na czerwono informację o pokryciu kodu na poziomie (.+)'
 
         color = DEFAULT_COLORS['red']
-        expected = '^\033\[%sm\s+\d+\s+\d+\s+\d+\s+%d' % (color, int(coverage))
+        expected = '^\033\[%sm\s+\d+\s+\d+\s+\d+\s+\d+\s+%d' % (color, int(coverage))
         result = self.output.getvalue().splitlines()[-1]
         self.assertTrue(bool(re.search(expected, result)))
 
@@ -121,7 +121,7 @@ class RunMonitorTestCase(unittest.TestCase):
         u'zobaczę na zielono informację o pokryciu kodu na poziomie (.+)'
 
         color = DEFAULT_COLORS['green']
-        expected = '^\033\[%sm\s+\d+\s+\d+\s+\d+\s+%d' % (color, int(coverage))
+        expected = '^\033\[%sm\s+\d+\s+\d+\s+\d+\s+\d+\s+%d' % (color, int(coverage))
         result = self.output.getvalue().splitlines()[-1]
         self.assertTrue(bool(re.search(expected, result)))
 
@@ -129,7 +129,7 @@ class RunMonitorTestCase(unittest.TestCase):
         u'zobaczę w kolorze morskim informację o pokryciu kodu na poziomie (.+)'
 
         color = DEFAULT_COLORS['sea']
-        expected = '^\033\[\d+m\s+\d+\s+\d+\s+\d+\033\[%sm\s*%d' % (color, int(coverage))
+        expected = '^\033\[\d+m\s+\d+\s+\d+\s+\d+\s+\d+\033\[%sm\s*%d' % (color, int(coverage))
         result = self.output.getvalue().splitlines()[-1]
         self.assertTrue(bool(re.search(expected, result)))
 
@@ -150,7 +150,7 @@ class RunMonitorTestCase(unittest.TestCase):
         u'zobaczę na niebiesko informację o pokryciu kodu na poziomie (.+)'
 
         color = DEFAULT_COLORS['blue']
-        expected = '^\033\[%sm\s+\d+\s+\d+\s+\d+\s+%d' % (color, int(coverage))
+        expected = '^\033\[%sm\s+\d+\s+\d+\s+\d+\s+\d+\s+%d' % (color, int(coverage))
         result = self.output.getvalue().splitlines()[-1]
         self.assertTrue(bool(re.search(expected, result)))
 

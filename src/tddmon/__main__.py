@@ -54,7 +54,7 @@ class StatusDisplay(IObserver, object):
         - print status information
     """
     def notify(self, observable, *args, **kwargs):
-        ran, failures, errors, coverage = args
+        ran, failures, errors, skipped, coverage = args
         # first run
         if self._first_run:
             self._write_header()
@@ -62,10 +62,10 @@ class StatusDisplay(IObserver, object):
         if ran is None:
             self._write_empty()
         else:
-            self._write(ran, failures, errors, coverage)
+            self._write(ran, failures, errors, skipped, coverage)
 
     @abstractmethod
-    def _write(self, ran, failures, errors, coverage):
+    def _write(self, ran, failures, errors, skipped, coverage):
         pass  # pragma nocover
 
     @abstractmethod
@@ -84,8 +84,8 @@ class BWDisplay(StatusDisplay):
 
         - print status information
     """
-    pattern = '%(color)s %(num)8d%(failures)9d%(errors)8d%(coverage)8d%%\n'
-    empty_pattern = '%(color)s%(space)28s%(space)8s%%\n'
+    pattern = '%(color)s %(num)8d%(failures)9d%(errors)8d%(skipped)8d%(coverage)8d%%\n'
+    empty_pattern = '%(color)s%(space)36s%(space)8s%%\n'
 
     def __init__(self, output=None, colors=None):
         """@todo: Docstring for __init__
@@ -97,12 +97,12 @@ class BWDisplay(StatusDisplay):
         self._first_run = True
 
     def _write_header(self):
-        self._output.write('      Tests ran Failures  Errors Coverage\n')
+        self._output.write('      Tests ran Failures  Errors Skipped Coverage\n')
 
     def _write_empty(self):
         self._output.write('\n')
 
-    def _write(self, ran, failures, errors, coverage):
+    def _write(self, ran, failures, errors, skipped, coverage):
         """ Display status information.
 
         :param ran: number of tests run
@@ -119,6 +119,7 @@ class BWDisplay(StatusDisplay):
             'num': ran,
             'failures': failures,
             'errors': errors,
+            'skipped': skipped,
             'coverage': coverage,
         }
         self._output.write(line)
@@ -131,8 +132,8 @@ class ColorDisplay(StatusDisplay):
 
         - print status information
     """
-    pattern = '%(color)s %(num)8d%(failures)9d%(errors)8d%(coverage_color)s%(coverage)8d%%%(normal_color)s\n'
-    empty_pattern = '%(color)s%(space)28s%(coverage_color)s%(space)8s%%%(normal_color)s\n'
+    pattern = '%(color)s %(num)8d%(failures)9d%(errors)8d%(skipped)8d%(coverage_color)s%(coverage)8d%%%(normal_color)s\n'
+    empty_pattern = '%(color)s%(space)36s%(coverage_color)s%(space)8s%%%(normal_color)s\n'
 
     def __init__(self, output=None, colors=None):
         """@todo: Docstring for __init__
@@ -147,12 +148,12 @@ class ColorDisplay(StatusDisplay):
         self._first_run = True
 
     def _write_header(self):
-        self._output.write('Tests ran Failures  Errors Coverage\n')
+        self._output.write('Tests ran Failures  Errors Skipped Coverage\n')
 
     def _write_empty(self):
         self._output.write('\n')
 
-    def _write(self, ran, failures, errors, coverage):
+    def _write(self, ran, failures, errors, skipped, coverage):
         """ Display status information.
 
         :param ran: number of tests run
@@ -181,6 +182,7 @@ class ColorDisplay(StatusDisplay):
             'num': ran,
             'failures': failures,
             'errors': errors,
+            'skipped': skipped,
             'coverage_color': '\033[%sm' % coverage_color if coverage_color != color else '',
             'coverage': coverage,
             'normal_color': '\033[0m',
@@ -201,15 +203,16 @@ class RemoteDisplay(IObserver, object):
         self._url = url
 
     def notify(self, observable, *args, **kwargs):
-        ran, failures, errors, coverage = args
-        self._send(ran, failures, errors, coverage)
+        ran, failures, errors, skipped, coverage = args
+        self._send(ran, failures, errors, skipped, coverage)
 
-    def _send(self, ran, failures, errors, coverage):
+    def _send(self, ran, failures, errors, skipped, coverage):
         """ Send status information.
 
         :param ran: number of tests run
         :param failures: number of failures
         :param errors: number of errors
+        :param skipped: number of skipped
         :param coverage: coverage percent
         """
         data = {
@@ -217,6 +220,7 @@ class RemoteDisplay(IObserver, object):
             'ran': ran,
             'failures': failures,
             'errors': errors,
+            'skipped': skipped,
             'coverage': coverage
         }
         data = urlencode(data)
@@ -317,21 +321,23 @@ class TestResultParser(object):
         lines = input_data.splitlines()
         lines.reverse()
         ran = self._get_ran_tests_num(lines)
-        failures, errors = self._get_failures(lines)
+        failures, errors, skipped = self._get_failures(lines)
         coverage = self._get_coverage(lines)
-        return (ran, failures, errors, coverage)
+        return (ran, failures, errors, skipped, coverage)
 
     def _get_failures(self, lines):
-        error_re = re.compile('^(?:OK|FAILED)(?:\s*\((?:failures=(\d+))?(?:,\s*)?(?:errors=(\d+))?)')
+        error_re = re.compile('^(?:OK|FAILED)(?:\s*\((?:failures=(\d+))?(?:,\s*)?(?:errors=(\d+))?(?:skipped=(\d+))?)')
         failures = 0
         errors = 0
+        skipped = 0
         for line in lines:
             match = error_re.search(line)
             if match:
                 failures = int(match.group(1) or 0)
                 errors = int(match.group(2) or 0)
-                return failures, errors
-        return failures, errors
+                skipped = int(match.group(3) or 0)
+                return failures, errors, skipped
+        return failures, errors, skipped
 
     def _get_ran_tests_num(self, lines):
         ran_re = re.compile('^Ran (\d+)')
@@ -417,8 +423,8 @@ class TddMon(IObservable, object):
         - IObserver - <<sink>>
         - FileMonitor - <<source>>
     """
-    def __init__(self, filename, log=None, output=None):
-        self.test_runner = TestRunner(filename)
+    def __init__(self, command, log=None, output=None):
+        self.test_runner = TestRunner(command)
         self.log_writer = LogWriter(log) if log is not None else DummyWriter()
         self.test_result_parser = TestResultParser()
         self.file_monitor = FileMonitor()
@@ -449,7 +455,7 @@ class TddMon(IObservable, object):
                 try:
                     self.file_monitor.wait_for_change()
                 except FileMonitorTimeoutError:
-                    self.notify_observers(None, None, None, None)
+                    self.notify_observers(None, None, None, None, None)
                 else:
                     self.run()
         except KeyboardInterrupt:
@@ -460,14 +466,14 @@ def main(*args):
     """ Run test monitor
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument('filename')
+    parser.add_argument('command')
     parser.add_argument('-l', '--log', dest='log', type=argparse.FileType('a'))
     parser.add_argument('-s', '--server', dest='server')
     parser.add_argument('-n', '--name', dest='name')
     default_color = (sys.platform != 'win32')
     parser.add_argument('--nocolor', dest='color', default=default_color, action='store_false')
     result = parser.parse_args(*args)
-    controller = TddMon(result.filename, log=result.log)
+    controller = TddMon(result.command, log=result.log)
     if result.color:
         controller.register(ColorDisplay())
     else:

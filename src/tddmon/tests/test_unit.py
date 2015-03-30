@@ -114,9 +114,9 @@ class ColorDisplayNotifyTestCase(unittest.TestCase):
         """ Scenariusz: pierwszy wynik """
         # Arrange
         # Act
-        self.obj.notify(sentinel.observable, None, None, None, None)
+        self.obj.notify(sentinel.observable, None, None, None, None, None)
         # Assert
-        expected = 'Tests ran Failures  Errors Coverage\n'
+        expected = 'Tests ran Failures  Errors Skipped Coverage\n'
         result = self.output.getvalue()
         self.assertTrue(result.startswith(expected))
 
@@ -124,7 +124,7 @@ class ColorDisplayNotifyTestCase(unittest.TestCase):
         """ Scenariusz: brak danych - timeout """
         # Arrange
         # Act
-        self.obj.notify(sentinel.observable, None, None, None, None)
+        self.obj.notify(sentinel.observable, None, None, None, None, None)
         # Assert
         expected = '\n'
         result = self.output.getvalue()
@@ -134,11 +134,11 @@ class ColorDisplayNotifyTestCase(unittest.TestCase):
         """ Scenariusz: testy zakończone sukcesem """
         # Arrange
         # Act
-        num, failures, errors, coverage = 1, 0, 0, 100
-        self.obj.notify(sentinel.observable, num, failures, errors, coverage)
+        num, failures, errors, skipped, coverage = 1, 0, 0, 0, 100
+        self.obj.notify(sentinel.observable, num, failures, errors, skipped, coverage)
         # Assert
         color = DEFAULT_COLORS['green']
-        expected = self._prepare_expected(color, failures, errors, num, coverage)
+        expected = self._prepare_expected(color, failures, errors, skipped, num, coverage)
         result = self.output.getvalue()
         self.assertTrue(result.endswith(expected))
 
@@ -146,11 +146,11 @@ class ColorDisplayNotifyTestCase(unittest.TestCase):
         """ Scenariusz: testy zakończone porażką """
         # Arrange
         # Act
-        num, failures, errors, coverage = 1, 1, 0, 80
-        self.obj.notify(sentinel.observable, num, failures, errors, coverage)
+        num, failures, errors, skipped, coverage = 1, 1, 0, 0, 80
+        self.obj.notify(sentinel.observable, num, failures, errors, skipped, coverage)
         # Assert
         color = DEFAULT_COLORS['red']
-        expected = self._prepare_expected(color, failures, errors, num, coverage)
+        expected = self._prepare_expected(color, failures, errors, skipped, num, coverage)
         result = self.output.getvalue()
         self.assertTrue(result.endswith(expected))
 
@@ -158,12 +158,12 @@ class ColorDisplayNotifyTestCase(unittest.TestCase):
         """ Scenariusz: brak testów """
         # Arrange
         # Act
-        num, failures, errors, coverage = 0, 0, 0, 0
-        self.obj.notify(sentinel.observable, num, failures, errors, coverage)
+        num, failures, errors, skipped, coverage = 0, 0, 0, 0, 0
+        self.obj.notify(sentinel.observable, num, failures, errors, skipped, coverage)
         # Assert
         color = DEFAULT_COLORS['green']
         sea = DEFAULT_COLORS['sea']
-        expected = self._prepare_expected(color, failures, errors, num,
+        expected = self._prepare_expected(color, failures, errors, skipped, num,
                                           coverage, coverage_color=sea)
         result = self.output.getvalue()
         self.assertTrue(result.endswith(expected))
@@ -172,11 +172,11 @@ class ColorDisplayNotifyTestCase(unittest.TestCase):
         """ Scenariusz: wystąpiły błędy """
         # Arrange
         # Act
-        num, failures, errors, coverage = 1, 0, 1, 50
-        self.obj.notify(sentinel.observable, num, failures, errors, coverage)
+        num, failures, errors, skipped, coverage = 1, 0, 1, 0, 50
+        self.obj.notify(sentinel.observable, num, failures, errors, skipped, coverage)
         # Assert
         color = DEFAULT_COLORS['red']
-        expected = self._prepare_expected(color, failures, errors, num, coverage)
+        expected = self._prepare_expected(color, failures, errors, skipped, num, coverage)
         result = self.output.getvalue()
         self.assertTrue(result.endswith(expected))
 
@@ -184,12 +184,12 @@ class ColorDisplayNotifyTestCase(unittest.TestCase):
         """ Scenariusz: testy zakończone sukcesem ale nie pełne pokrycie"""
         # Arrange
         # Act
-        num, failures, errors, coverage = 1, 0, 0, 50
-        self.obj.notify(sentinel.observable, num, failures, errors, coverage)
+        num, failures, errors, skipped, coverage = 1, 0, 0, 0, 50
+        self.obj.notify(sentinel.observable, num, failures, errors, skipped, coverage)
         # Assert
         color = DEFAULT_COLORS['green']
         sea = DEFAULT_COLORS['sea']
-        expected = self._prepare_expected(color, failures, errors, num,
+        expected = self._prepare_expected(color, failures, errors, skipped, num,
                                           coverage, coverage_color=sea)
         result = self.output.getvalue()
         self.assertTrue(result.endswith(expected))
@@ -198,24 +198,25 @@ class ColorDisplayNotifyTestCase(unittest.TestCase):
         """ Scenariusz: ponowne uruchomienie na zielono """
         # Arrange
         # Act
-        num, failures, errors, coverage = 1, 0, 0, 100
-        self.obj.notify(sentinel.observable, num, failures, errors, coverage)
-        self.obj.notify(sentinel.observable, num, failures, errors, coverage)
+        num, failures, errors, skipped, coverage = 1, 0, 0, 0, 100
+        self.obj.notify(sentinel.observable, num, failures, errors, skipped, coverage)
+        self.obj.notify(sentinel.observable, num, failures, errors, skipped, coverage)
         # Assert
         color = DEFAULT_COLORS['green']
-        expected = self._prepare_expected(color, failures, errors, num, coverage)
+        expected = self._prepare_expected(color, failures, errors, skipped, num, coverage)
         color = DEFAULT_COLORS['blue']
-        expected += self._prepare_expected(color, failures, errors, num, coverage)
+        expected += self._prepare_expected(color, failures, errors, skipped, num, coverage)
         result = self.output.getvalue()
         self.assertTrue(result.endswith(expected))
 
-    def _prepare_expected(self, color, failures, errors, num, coverage, coverage_color=None):
+    def _prepare_expected(self, color, failures, errors, skipped, num, coverage, coverage_color=None):
         coverage_color = coverage_color if coverage_color is not None else color
         expected = ColorDisplay.pattern % {
             'color': '\033[%sm' % color,
             'num': num,
             'failures': failures,
             'errors': errors,
+            'skipped': skipped,
             'coverage_color': '\033[%sm' % coverage_color if coverage_color != color else '',
             'coverage': coverage,
             'normal_color': '\033[0m',
@@ -236,9 +237,9 @@ class BWDisplayNotifyTestCase(unittest.TestCase):
         """ Scenariusz: pierwszy wynik """
         # Arrange
         # Act
-        self.obj.notify(sentinel.observable, None, None, None, None)
+        self.obj.notify(sentinel.observable, None, None, None, None, None)
         # Assert
-        expected = '      Tests ran Failures  Errors Coverage\n'
+        expected = '      Tests ran Failures  Errors Skipped Coverage\n'
         result = self.output.getvalue()
         self.assertTrue(result.startswith(expected))
 
@@ -246,7 +247,7 @@ class BWDisplayNotifyTestCase(unittest.TestCase):
         """ Scenariusz: brak danych - timeout """
         # Arrange
         # Act
-        self.obj.notify(sentinel.observable, None, None, None, None)
+        self.obj.notify(sentinel.observable, None, None, None, None, None)
         # Assert
         expected = '\n'
         result = self.output.getvalue()
@@ -256,11 +257,11 @@ class BWDisplayNotifyTestCase(unittest.TestCase):
         """ Scenariusz: testy zakończone sukcesem """
         # Arrange
         # Act
-        num, failures, errors, coverage = 1, 0, 0, 100
-        self.obj.notify(sentinel.observable, num, failures, errors, coverage)
+        num, failures, errors, skipped, coverage = 1, 0, 0, 0, 100
+        self.obj.notify(sentinel.observable, num, failures, errors, skipped, coverage)
         # Assert
         color = 'OK:   '
-        expected = self._prepare_expected(color, failures, errors, num, coverage)
+        expected = self._prepare_expected(color, failures, errors, skipped, num, coverage)
         result = self.output.getvalue()
         self.assertTrue(result.endswith(expected))
 
@@ -268,11 +269,11 @@ class BWDisplayNotifyTestCase(unittest.TestCase):
         """ Scenariusz: testy zakończone porażką """
         # Arrange
         # Act
-        num, failures, errors, coverage = 1, 1, 0, 80
-        self.obj.notify(sentinel.observable, num, failures, errors, coverage)
+        num, failures, errors, skipped, coverage = 1, 1, 0, 0, 80
+        self.obj.notify(sentinel.observable, num, failures, errors, skipped, coverage)
         # Assert
         color = 'FAIL: '
-        expected = self._prepare_expected(color, failures, errors, num, coverage)
+        expected = self._prepare_expected(color, failures, errors, skipped, num, coverage)
         result = self.output.getvalue()
         self.assertTrue(result.endswith(expected))
 
@@ -280,11 +281,11 @@ class BWDisplayNotifyTestCase(unittest.TestCase):
         """ Scenariusz: brak testów """
         # Arrange
         # Act
-        num, failures, errors, coverage = 0, 0, 0, 0
-        self.obj.notify(sentinel.observable, num, failures, errors, coverage)
+        num, failures, errors, skipped, coverage = 0, 0, 0, 0, 0
+        self.obj.notify(sentinel.observable, num, failures, errors, skipped, coverage)
         # Assert
         color = 'OK:   '
-        expected = self._prepare_expected(color, failures, errors, num, coverage)
+        expected = self._prepare_expected(color, failures, errors, skipped, num, coverage)
         result = self.output.getvalue()
         self.assertTrue(result.endswith(expected))
 
@@ -292,11 +293,11 @@ class BWDisplayNotifyTestCase(unittest.TestCase):
         """ Scenariusz: wystąpiły błędy """
         # Arrange
         # Act
-        num, failures, errors, coverage = 1, 0, 1, 50
-        self.obj.notify(sentinel.observable, num, failures, errors, coverage)
+        num, failures, errors, skipped, coverage = 1, 0, 1, 0, 50
+        self.obj.notify(sentinel.observable, num, failures, errors, skipped, coverage)
         # Assert
         color = 'FAIL: '
-        expected = self._prepare_expected(color, failures, errors, num, coverage)
+        expected = self._prepare_expected(color, failures, errors, skipped, num, coverage)
         result = self.output.getvalue()
         self.assertTrue(result.endswith(expected))
 
@@ -304,11 +305,11 @@ class BWDisplayNotifyTestCase(unittest.TestCase):
         """ Scenariusz: testy zakończone sukcesem ale nie pełne pokrycie"""
         # Arrange
         # Act
-        num, failures, errors, coverage = 1, 0, 0, 50
-        self.obj.notify(sentinel.observable, num, failures, errors, coverage)
+        num, failures, errors, skipped, coverage = 1, 0, 0, 0, 50
+        self.obj.notify(sentinel.observable, num, failures, errors, skipped, coverage)
         # Assert
         color = 'OK:   '
-        expected = self._prepare_expected(color, failures, errors, num, coverage)
+        expected = self._prepare_expected(color, failures, errors, skipped, num, coverage)
         result = self.output.getvalue()
         self.assertTrue(result.endswith(expected))
 
@@ -316,23 +317,24 @@ class BWDisplayNotifyTestCase(unittest.TestCase):
         """ Scenariusz: ponowne uruchomienie na zielono """
         # Arrange
         # Act
-        num, failures, errors, coverage = 1, 0, 0, 100
-        self.obj.notify(sentinel.observable, num, failures, errors, coverage)
-        self.obj.notify(sentinel.observable, num, failures, errors, coverage)
+        num, failures, errors, skipped, coverage = 1, 0, 0, 0, 100
+        self.obj.notify(sentinel.observable, num, failures, errors, skipped, coverage)
+        self.obj.notify(sentinel.observable, num, failures, errors, skipped, coverage)
         # Assert
         color = 'OK:   '
-        expected = self._prepare_expected(color, failures, errors, num, coverage)
+        expected = self._prepare_expected(color, failures, errors, skipped, num, coverage)
         color = 'OK:   '
-        expected += self._prepare_expected(color, failures, errors, num, coverage)
+        expected += self._prepare_expected(color, failures, errors, skipped, num, coverage)
         result = self.output.getvalue()
         self.assertTrue(result.endswith(expected))
 
-    def _prepare_expected(self, color, failures, errors, num, coverage, coverage_color=None):
+    def _prepare_expected(self, color, failures, errors, skipped, num, coverage, coverage_color=None):
         expected = BWDisplay.pattern % {
             'color': color,
             'num': num,
             'failures': failures,
             'errors': errors,
+            'skipped': skipped,
             'coverage': coverage,
         }
         return expected
@@ -439,7 +441,7 @@ class TestResultParserParseTestCase(unittest.TestCase):
         # Act
         result = obj.parse(input_data)
         # Assert
-        self.assertEqual(result, (0, 0, 0, 0))
+        self.assertEqual(result, (0, 0, 0, 0, 0))
 
     def test_should_return_1_test_num_on_success(self):
         """ Scenariusz: 1 poprawny test """
@@ -452,7 +454,7 @@ OK
         # Act
         result = obj.parse(input_data)
         # Assert
-        self.assertEqual(result, (1, 0, 0, 0))
+        self.assertEqual(result, (1, 0, 0, 0, 0))
 
     def test_should_return_2_test_num_on_success(self):
         """ Scenariusz: 2 poprawne testy """
@@ -465,7 +467,7 @@ OK
         # Act
         result = obj.parse(input_data)
         # Assert
-        self.assertEqual(result, (2, 0, 0, 0))
+        self.assertEqual(result, (2, 0, 0, 0, 0))
 
     def test_should_return_failures_num_on_failure(self):
         """ Scenariusz: testy niepoprawne """
@@ -478,7 +480,7 @@ FAILED (failures=1)
         # Act
         result = obj.parse(input_data)
         # Assert
-        self.assertEqual(result, (1, 1, 0, 0))
+        self.assertEqual(result, (1, 1, 0, 0, 0))
 
     def test_should_return_coverage_on_success(self):
         """ Scenariusz: wyniki z pokryciem kodu """
@@ -494,7 +496,7 @@ leap       26      0      6      0   91%
         # Act
         result = obj.parse(input_data)
         # Assert
-        self.assertEqual(result, (1, 0, 0, 91))
+        self.assertEqual(result, (1, 0, 0, 0, 91))
 
 
 @test_type('unit')
@@ -725,7 +727,7 @@ class TddMonLoopTestCase(unittest.TestCase):
                 # Act
                 obj.loop()
                 # Assert
-                status_display.notify.assert_called_once_with(obj, None, None, None, None)
+                status_display.notify.assert_called_once_with(obj, None, None, None, None, None)
 
 
 @test_type('unit')
@@ -761,13 +763,14 @@ class RemoteDisplayNotifyTestCase(unittest.TestCase):
         # Arrange
         # Act
         self.obj.notify(sentinel.observable, sentinel.ran, sentinel.failures,
-                        sentinel.errors, sentinel.coverage)
+                        sentinel.errors, sentinel.skipped, sentinel.coverage)
         # Assert
         data = {
             'name': self._name,
             'ran': sentinel.ran,
             'failures': sentinel.failures,
             'errors': sentinel.errors,
+            'skipped': sentinel.skipped,
             'coverage': sentinel.coverage
         }
         data = urlencode(data)
